@@ -1,22 +1,15 @@
 package net.ericsonj.verilog;
 
-import java.io.File;
 import net.ericsonj.commonscli.ConsoleApplication;
-import net.ericsonj.verilog.decorations.AbstractModuleAlign;
-import net.ericsonj.verilog.decorations.AlignBlockingAssignments;
-import net.ericsonj.verilog.decorations.AlignLineComment;
-import net.ericsonj.verilog.decorations.AlignNoBlockingAssignments;
-import net.ericsonj.verilog.decorations.ModuleAlign;
-import net.ericsonj.verilog.decorations.ModuleInstantiation;
-import net.ericsonj.verilog.decorations.SpacesBeforeIfStatement;
-import net.ericsonj.verilog.decorations.SpacesTrailingComment;
-import net.ericsonj.verilog.decorations.SpacesBlockingAssignment;
-import net.ericsonj.verilog.decorations.SpacesInParentheses;
-import net.ericsonj.verilog.decorations.SpacesInSquareBrackets;
-import net.ericsonj.verilog.decorations.SpacesNoBlockingAssignment;
+import net.ericsonj.verilog.decorations.*;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+
+import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -26,6 +19,7 @@ public class VerilogFormat extends ConsoleApplication {
 
     private boolean printFileFormated = false;
     private FormatSetting settings;
+    private String charset;
 
     /**
      * @param args the command line arguments
@@ -52,6 +46,12 @@ public class VerilogFormat extends ConsoleApplication {
                 .argName(FormatSetting.FILE_PROP)
                 .hasArg()
                 .desc("Settings config")
+                .build());
+        options.addOption(Option.builder("c")
+                .longOpt("charset")
+                .argName("legal charset name")
+                .hasArg()
+                .desc("Specify the charset")
                 .build());
         return options;
     }
@@ -91,6 +91,12 @@ public class VerilogFormat extends ConsoleApplication {
 
         }
 
+        if (line.hasOption("c")) {
+            this.charset = line.getOptionValue("c");
+        } else {
+            this.charset = "UTF-8";
+        }
+
         if (line.hasOption("f")) {
             String pathname = line.getOptionValue("f");
             File file = new File(pathname);
@@ -101,11 +107,18 @@ public class VerilogFormat extends ConsoleApplication {
             }
             formatFile(file);
         }
+
     }
 
     private void formatFile(File file) {
         FileFormat format = new FileFormat(this.settings);
-        VerilogFile vFile = new VerilogFile(file.getAbsolutePath(), format);
+        VerilogFile vFile = null;
+        try {
+            vFile = new VerilogFile(file.getAbsolutePath(), format, charset);
+        } catch (UnsupportedEncodingException e) {
+            vFile = new VerilogFile(file.getAbsolutePath(), format);
+            Logger.getLogger(VerilogFormat.class.getName()).log(Level.SEVERE, null, e);
+        }
         vFile.addStyle(new IndentationStyle());
         vFile.addStyle(new ModuleAlign());
         vFile.addStyle(new SpacesTrailingComment());
